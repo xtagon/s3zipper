@@ -26,10 +26,10 @@ type configuration struct {
 	Bucket             string
 	Region             string
 	RedisServerAndPort string
-	Port               int
+	Port               string
 }
 
-var config = configuration{}
+var config configuration
 var awsBucket *s3.Bucket
 var redisPool *redigo.Pool
 
@@ -51,19 +51,13 @@ func main() {
 		return
 	}
 
-	configFile, _ := os.Open("conf.json")
-	decoder := json.NewDecoder(configFile)
-	err := decoder.Decode(&config)
-	if err != nil {
-		panic("Error reading conf")
-	}
-
+	initConfig()
 	initAwsBucket()
 	initRedis()
 
 	fmt.Println("Running on port", config.Port)
 	http.HandleFunc("/", handler)
-	http.ListenAndServe(":"+strconv.Itoa(config.Port), nil)
+	http.ListenAndServe(":"+config.Port, nil)
 }
 
 func test() {
@@ -79,6 +73,24 @@ func test() {
 	}
 
 	parseFileDates(files)
+}
+
+func initConfig() {
+	defaults := func(value, def string) string {
+		if value == "" {
+			return def
+		}
+		return value
+	}
+
+	config = configuration{
+		AccessKey:          os.Getenv("AWS_ACCESS_KEY"),
+		SecretKey:          os.Getenv("AWS_SECRET_KEY"),
+		Bucket:             os.Getenv("AWS_BUCKET"),
+		Region:             defaults(os.Getenv("AWS_REGION"), "us-east-1"),
+		RedisServerAndPort: os.Getenv("REDIS_URL"),
+		Port:               defaults(os.Getenv("PORT"), "8000"),
+	}
 }
 
 func parseFileDates(files []*redisFile) {
