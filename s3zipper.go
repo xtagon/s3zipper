@@ -26,6 +26,7 @@ type configuration struct {
 	Bucket             string
 	Region             string
 	RedisServerAndPort string
+	RedisAuth          string
 	Port               string
 }
 
@@ -89,6 +90,7 @@ func initConfig() {
 		Bucket:             os.Getenv("AWS_BUCKET"),
 		Region:             defaults(os.Getenv("AWS_REGION"), "us-east-1"),
 		RedisServerAndPort: os.Getenv("REDIS_URL"),
+		RedisAuth:          os.Getenv("REDIS_AUTH"),
 		Port:               defaults(os.Getenv("PORT"), "8000"),
 	}
 }
@@ -120,7 +122,17 @@ func initRedis() {
 		MaxIdle:     10,
 		IdleTimeout: 1 * time.Second,
 		Dial: func() (redigo.Conn, error) {
-			return redigo.Dial("tcp", config.RedisServerAndPort)
+			c, err := redigo.Dial("tcp", config.RedisServerAndPort)
+			if err != nil {
+				return nil, err
+			}
+			if auth := config.RedisAuth; auth != "" {
+				if _, err := c.Do("AUTH", auth); err != nil {
+					c.Close()
+					return nil, err
+				}
+			}
+			return c, err
 		},
 		TestOnBorrow: func(c redigo.Conn, t time.Time) (err error) {
 			_, err = c.Do("PING")
