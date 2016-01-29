@@ -20,7 +20,7 @@ import (
 	redigo "github.com/garyburd/redigo/redis"
 )
 
-type Configuration struct {
+type configuration struct {
 	AccessKey          string
 	SecretKey          string
 	Bucket             string
@@ -29,17 +29,17 @@ type Configuration struct {
 	Port               int
 }
 
-var config = Configuration{}
-var aws_bucket *s3.Bucket
+var config = configuration{}
+var awsBucket *s3.Bucket
 var redisPool *redigo.Pool
 
-type RedisFile struct {
+type redisFile struct {
 	FileName string
 	Folder   string
 	S3Path   string
 	// Optional - we use are Teamwork.com but feel free to rmove
-	FileId       int64 `json:",string"`
-	ProjectId    int64 `json:",string"`
+	FileID       int64 `json:",string"`
+	ProjectID    int64 `json:",string"`
 	ProjectName  string
 	Modified     string
 	ModifiedTime time.Time
@@ -59,7 +59,7 @@ func main() {
 	}
 
 	initAwsBucket()
-	InitRedis()
+	initRedis()
 
 	fmt.Println("Running on port", config.Port)
 	http.HandleFunc("/", handler)
@@ -68,8 +68,8 @@ func main() {
 
 func test() {
 	var err error
-	var files []*RedisFile
-	jsonData := "[{\"S3Path\":\"1\\/p23216.tf_A89A5199-F04D-A2DE-5824E635AC398956.Avis_Rent_A_Car_Print_Reservation.pdf\",\"FileVersionId\":\"4164\",\"FileName\":\"Avis Rent A Car_ Print Reservation.pdf\",\"ProjectName\":\"Superman\",\"ProjectId\":\"23216\",\"Folder\":\"\",\"FileId\":\"4169\"},{\"modified\":\"2015-07-18T02:05:04Z\",\"S3Path\":\"1\\/p23216.tf_351310E0-DF49-701F-60601109C2792187.a1.jpg\",\"FileVersionId\":\"4165\",\"FileName\":\"a1.jpg\",\"ProjectName\":\"Superman\",\"ProjectId\":\"23216\",\"Folder\":\"Level 1\\/Level 2 x\\/Level 3\",\"FileId\":\"4170\"}]"
+	var files []*redisFile
+	jsonData := "[{\"S3Path\":\"1\\/p23216.tf_A89A5199-F04D-A2DE-5824E635AC398956.Avis_Rent_A_Car_Print_Reservation.pdf\",\"FileVersionId\":\"4164\",\"FileName\":\"Avis Rent A Car_ Print Reservation.pdf\",\"ProjectName\":\"Superman\",\"ProjectID\":\"23216\",\"Folder\":\"\",\"FileID\":\"4169\"},{\"modified\":\"2015-07-18T02:05:04Z\",\"S3Path\":\"1\\/p23216.tf_351310E0-DF49-701F-60601109C2792187.a1.jpg\",\"FileVersionId\":\"4165\",\"FileName\":\"a1.jpg\",\"ProjectName\":\"Superman\",\"ProjectID\":\"23216\",\"Folder\":\"Level 1\\/Level 2 x\\/Level 3\",\"FileID\":\"4170\"}]"
 
 	resultByte := []byte(jsonData)
 
@@ -81,7 +81,7 @@ func test() {
 	parseFileDates(files)
 }
 
-func parseFileDates(files []*RedisFile) {
+func parseFileDates(files []*redisFile) {
 	layout := "2006-01-02T15:04:05Z"
 	for _, file := range files {
 		t, err := time.Parse(layout, file.Modified)
@@ -100,10 +100,10 @@ func initAwsBucket() {
 		panic(err)
 	}
 
-	aws_bucket = s3.New(auth, aws.GetRegion(config.Region)).Bucket(config.Bucket)
+	awsBucket = s3.New(auth, aws.GetRegion(config.Region)).Bucket(config.Bucket)
 }
 
-func InitRedis() {
+func initRedis() {
 	redisPool = &redigo.Pool{
 		MaxIdle:     10,
 		IdleTimeout: 1 * time.Second,
@@ -123,11 +123,11 @@ func InitRedis() {
 // Remove all other unrecognised characters apart from
 var makeSafeFileName = regexp.MustCompile(`[#<>:"/\|?*\\]`)
 
-func getFilesFromRedis(ref string) (files []*RedisFile, err error) {
+func getFilesFromRedis(ref string) (files []*redisFile, err error) {
 
 	// Testing - enable to test. Remove later.
 	if 1 == 0 && ref == "test" {
-		files = append(files, &RedisFile{FileName: "test.zip", Folder: "", S3Path: "test/test.zip"}) // Edit and dplicate line to test
+		files = append(files, &redisFile{FileName: "test.zip", Folder: "", S3Path: "test/test.zip"}) // Edit and dplicate line to test
 		return
 	}
 
@@ -205,7 +205,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Read file from S3, log any errors
-		rdr, err := aws_bucket.GetReader(file.S3Path)
+		rdr, err := awsBucket.GetReader(file.S3Path)
 		if err != nil {
 			switch t := err.(type) {
 			case *s3.Error:
@@ -221,8 +221,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		// Build a good path for the file within the zip
 		zipPath := ""
 		// Prefix project Id and name, if any (remove if you don't need)
-		if file.ProjectId > 0 {
-			zipPath += strconv.FormatInt(file.ProjectId, 10) + "."
+		if file.ProjectID > 0 {
+			zipPath += strconv.FormatInt(file.ProjectID, 10) + "."
 			// Build Safe Project Name
 			file.ProjectName = makeSafeFileName.ReplaceAllString(file.ProjectName, "")
 			if file.ProjectName == "" { // Unlikely but just in case
