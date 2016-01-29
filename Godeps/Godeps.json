@@ -1,0 +1,22 @@
+{
+	"ImportPath": "github.com/maissimples/s3zipper",
+	"GoVersion": "go1.5",
+	"Deps": [
+		{
+			"ImportPath": "github.com/AdRoll/goamz/aws",
+			"Rev": "e57621c0fb3df6366f8a82e7d8a5a6ce24bf8c4b"
+		},
+		{
+			"ImportPath": "github.com/AdRoll/goamz/s3",
+			"Rev": "e57621c0fb3df6366f8a82e7d8a5a6ce24bf8c4b"
+		},
+		{
+			"ImportPath": "github.com/garyburd/redigo/internal",
+			"Rev": "836b6e58b3358112c8291565d01c35b8764070d7"
+		},
+		{
+			"ImportPath": "github.com/garyburd/redigo/redis",
+			"Rev": "836b6e58b3358112c8291565d01c35b8764070d7"
+		}
+	]
+}
